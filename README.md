@@ -1,12 +1,36 @@
 # commas
-Transform whitespace-separated input into comma-separated output.
+Transform whitespace-separated input, either insert a delimiter or substitue a template string
+with positional arguments.
 
 ## Features
 
 - receive stdin, write stdout
+- replace whitespace with a delimiter
+- OR, substitute a template string with positional arguments
 - handles quoted fields, and writes quoted fields
 
-## Demo
+## Examples: Template
+
+This is a no-nonsense field substitution tool.
+
+### Basic Test
+
+```bash
+$ echo 'a b c' | commas -t '$2 $3 $1'
+b c a
+```
+
+Note that the fields start at 1, not 0. The only reason for this is to align with
+bash so that you don't have to keep switching your mental model.
+
+Quotes work:
+
+```bash
+$ echo 'a "b1 b2" c' | commas -t '$2 $3 $1'
+"b1 b2" c a
+```
+
+## Examples: Delimiter
 
 ### Basic Test
 
