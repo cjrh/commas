@@ -19,6 +19,9 @@ struct Cli {
 
     #[clap(short, long, action = ArgAction::SetFalse, help = "Lose quotes in output")]
     lose_quotes: bool,
+
+    #[clap(short, long, help = "Character sequence to remove from the ends of each item")]
+    strips: Option<String>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -28,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for line in linedance::input()? {
             let line = line?;
             // User could include quotes in the template if they wanted.
-            let new_line = apply(&line, false);
+            let new_line = apply(&line, false, &args.strips);
 
             let variables = new_line
                 .iter()
@@ -41,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         for line in linedance::input()? {
             let line = line?;
-            let new_line = apply(&line, args.lose_quotes);
+            let new_line = apply(&line, args.lose_quotes, &args.strips);
             println!("{}", new_line.join(&args.delimiter));
         }
     }
@@ -49,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn apply(line: &str, keep_quotes: bool) -> Vec<String> {
+fn apply(line: &str, keep_quotes: bool, strips: &Option<String>) -> Vec<String> {
     // Check CLI parameters for the presence of `--fmt` followed by a string
     // If present, use that string as a template with the subst library.
     shlex::split(line)
@@ -59,6 +62,12 @@ fn apply(line: &str, keep_quotes: bool) -> Vec<String> {
             if keep_quotes && item.contains(char::is_whitespace) {
                 format!("\"{}\"", item)
             } else {
+                let item = if let Some(strips) = strips {
+                    let c = strips.chars().collect::<Vec<char>>();
+                    item.trim_matches(&*c)
+                } else {
+                    item
+                };
                 item.to_owned()
             }
         })
@@ -71,16 +80,16 @@ mod tests {
 
     #[test]
     fn test_apply() {
-        assert_eq!(apply("a b c", false).join(","), "a,b,c");
+        assert_eq!(apply("a b c", false, &None).join(","), "a,b,c");
     }
 
     #[test]
     fn test_spaces() {
-        assert_eq!(apply("a      b    c", false).join(","), "a,b,c");
+        assert_eq!(apply("a      b    c", false, &None).join(","), "a,b,c");
     }
 
     #[test]
     fn test_quotes() {
-        assert_eq!(apply(r#"a "b b" c"#, true).join(","), r#"a,"b b",c"#);
+        assert_eq!(apply(r#"a "b b" c"#, true, &None).join(","), r#"a,"b b",c"#);
     }
 }
