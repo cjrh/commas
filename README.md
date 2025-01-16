@@ -8,9 +8,39 @@ Transform whitespace-separated input into comma-separated output.
 
 ## Demo
 
+### Basic Test
+
 ```bash
-$ echo 'a    b   "c d"     e' | shlexy
+$ echo 'a b "c d" e' | commas
 a,b,"c d",e
 ```
 
-The output can be further processed with tools like `xsv`.
+### Extra whitespace
+
+Note that `tr` does not handle this. Without `commas` you would
+have to use `sed` or `awk` to handle this.
+
+```bash
+$ echo 'a     b    "c d"        e' | commas
+a,b,"c d",e
+```
+
+
+### Pass through to `xsv`
+
+The `xsv` tool can do a lot, but it needs comma-separated input.
+Piping data to `xsv` was the primary motivation for `commas`.
+
+Here's an example of field selection with `xsv`:
+
+```bash
+$ echo 'a     b    "c d"        e' | commas | xsv select 1,3
+a,c d
+```
+
+### Reformat selected fields with `xsv`
+
+```bash
+$ echo 'a     b    "c d"        e' | commas | xsv select 1,3,4 | xsv fmt -t '|'
+a|c d|e
+```
