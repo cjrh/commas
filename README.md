@@ -27,8 +27,9 @@ Quotes work:
 
 ```bash
 $ echo 'a "b1 b2" c' | commas -t '$2 $3 $1'
-"b1 b2" c a
+b1 b2 c a
 ```
+
 
 ## Examples: Delimiter
 
@@ -37,6 +38,13 @@ $ echo 'a "b1 b2" c' | commas -t '$2 $3 $1'
 ```bash
 $ echo 'a b "c d" e' | commas
 a,b,"c d",e
+```
+
+You can choose to lose quotes in the output
+
+```bash
+$ echo 'a b "c d" e' | commas -l
+a,b,c d,e
 ```
 
 ### Extra whitespace
