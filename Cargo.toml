@@ -1,5 +1,7 @@
 [package]
 name = "commas"
+description = "A command line utility to reformat data in shell pipelines."
+license = "Affero General Public License v3.0"
 version = "0.1.0"
 edition = "2021"
 
