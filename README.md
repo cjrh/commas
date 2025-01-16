@@ -1,7 +1,10 @@
-# shlexy
-Shell-parse input, output fields separated by a delimiter
+# commas
+Transform whitespace-separated input into comma-separated output.
 
-Also handles quoted strings.
+## Features
+
+- receive stdin, write stdout
+- handles quoted fields, and writes quoted fields
 
 ## Demo
 
