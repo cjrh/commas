@@ -7,8 +7,54 @@ use std::collections::HashMap;
 use clap::Parser;
 use clap::ArgAction;
 
+const EXAMPLES: &str = "\
+EXAMPLES FOR DELIMITER MODE:
+  # Replace whitespace with commas (default delimiter)
+  $ echo 'a b \"c d\" e' | commas
+  a,b,\"c d\",e
+
+  # Drop quotes from the output
+  $ echo 'a b \"c d\" e' | commas -l
+  a,b,c d,e
+
+  # Use a custom delimiter
+  $ echo 'a b c' | commas -d '|'
+  a|b|c
+
+  # Collapse runs of whitespace that `tr` cannot handle
+  $ echo 'a     b    \"c d\"        e' | commas
+  a,b,\"c d\",e
+
+  # Feed whitespace-separated data to xsv (the original motivation)
+  $ echo 'a     b    \"c d\"        e' | commas | xsv select 1,3
+  a,c d
+
+EXAMPLES FOR TEMPLATE MODE:
+  # Reorder fields. Fields are 1-indexed, matching bash positional args.
+  $ echo 'a b c' | commas -t '$2 $3 $1'
+  b c a
+
+  # Quoted fields stay together as one field
+  $ echo 'a \"b1 b2\" c' | commas -t '$2 $3 $1'
+  b1 b2 c a
+
+  # Reformat `lscpu` cache lines by concatenating size and unit
+  $ lscpu | grep cache | commas -t '$1 $3$4'
+  L1d 256KiB
+  L1i 256KiB
+  L2 4MiB
+  L3 8MiB
+
+  # Trim stray punctuation from field ends with --strips
+  $ lscpu | grep cache | commas -t '$1 x $3$4 x $5' -s ':('
+  L1d x 256KiB x 8
+  L1i x 256KiB x 8
+  L2 x 4MiB x 8
+  L3 x 8MiB x 2
+";
+
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(version, about, long_about = None, after_help = EXAMPLES)]
 struct Cli {
     /// Optional name to operate on
     #[clap(short, long, help = "Format string to use for output")]
