@@ -1,0 +1,124 @@
+name: release
+on:
+  push:
+    tags:
+    - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  build-release:
+    permissions:
+      contents: write  # upload release assets
+    name: build-release
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO: cargo
+      TARGET_FLAGS: ""
+      TARGET_DIR: ./target
+      RUST_BACKTRACE: 1
+      CROSS_VERSION: v0.2.5
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [linux, linux-arm, macos, win-msvc, win32-msvc]
+        include:
+        - build: linux
+          os: ubuntu-22.04
+          rust: stable
+          target: x86_64-unknown-linux-musl
+          use_cross: false
+        - build: linux-arm
+          os: ubuntu-22.04
+          rust: stable
+          target: arm-unknown-linux-gnueabihf
+          use_cross: true
+        - build: macos
+          os: macos-latest
+          rust: stable
+          target: x86_64-apple-darwin
+          use_cross: false
+        - build: win-msvc
+          os: windows-2022
+          rust: stable
+          target: x86_64-pc-windows-msvc
+          use_cross: false
+        - build: win32-msvc
+          os: windows-2022
+          rust: stable
+          target: i686-pc-windows-msvc
+          use_cross: false
+
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      with:
+        egress-policy: audit
+
+    - name: Checkout repository
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+    - name: Install packages (Ubuntu)
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: ci/ubuntu-install-packages
+
+    - name: Install packages (macOS)
+      if: matrix.os == 'macos-latest'
+      run: ci/macos-install-packages
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        targets: ${{ matrix.target }}
+
+    - name: Install Cross
+      if: matrix.use_cross
+      shell: bash
+      run: |
+        # Use the pre-built binary to avoid a slow `cargo install cross`.
+        dir="$RUNNER_TEMP/cross-download"
+        mkdir "$dir"
+        echo "$dir" >> "$GITHUB_PATH"
+        cd "$dir"
+        curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
+        tar xf cross-x86_64-unknown-linux-musl.tar.gz
+        echo "CARGO=cross" >> "$GITHUB_ENV"
+
+    - name: Configure target
+      shell: bash
+      run: |
+        echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> "$GITHUB_ENV"
+        echo "TARGET_DIR=./target/${{ matrix.target }}" >> "$GITHUB_ENV"
+
+    - name: Show build configuration
+      run: |
+        echo "cargo command is: ${{ env.CARGO }}"
+        echo "target flag is: ${{ env.TARGET_FLAGS }}"
+        echo "target dir is: ${{ env.TARGET_DIR }}"
+
+    - name: Build release binary
+      run: ${{ env.CARGO }} build --verbose --release ${{ env.TARGET_FLAGS }}
+
+    - name: Build archive
+      shell: bash
+      run: |
+        staging="commas-${{ github.ref_name }}-${{ matrix.target }}"
+        mkdir "$staging"
+        if [[ "${{ matrix.os }}" == windows-* ]]; then
+          cp "target/${{ matrix.target }}/release/commas.exe" "$staging/"
+          7z a "$staging.zip" "$staging"
+          echo "ASSET=$staging.zip" >> "$GITHUB_ENV"
+        else
+          cp "target/${{ matrix.target }}/release/commas" "$staging/"
+          tar czf "$staging.tar.gz" "$staging"
+          echo "ASSET=$staging.tar.gz" >> "$GITHUB_ENV"
+        fi
+
+    - name: Publish release asset
+      uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+      with:
+        tag_name: ${{ github.ref_name }}
+        files: ${{ env.ASSET }}
+        fail_on_unmatched_files: true

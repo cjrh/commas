@@ -5,6 +5,13 @@ license-file = "LICENSE"
 version = "0.1.0"
 edition = "2021"
 
+[package.metadata.release]
+# Match the tag pattern expected by .github/workflows/release.yml: bare
+# semver, no `v` prefix (e.g. `0.1.1`).
+tag-name = "{{version}}"
+# Not a library — don't push to crates.io.
+publish = false
+
 [dependencies]
 clap = { version = "4.5.26", features = ["derive"] }
 linedance = "0.2.0"
