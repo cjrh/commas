@@ -11,6 +11,8 @@ edition = "2021"
 tag-name = "{{version}}"
 # Not a library — don't push to crates.io.
 publish = false
+# Fast-forward from origin before releasing; abort if histories diverged.
+pre-release-hook = ["git", "pull", "--ff-only", "--tags"]
 
 [dependencies]
 clap = { version = "4.5.26", features = ["derive"] }
