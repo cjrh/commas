@@ -9,6 +9,8 @@ with positional arguments.
 - OR, substitute a template string with positional arguments
 - handles quoted fields, and writes quoted fields
 
+`commas` operates in two modes: template mode and delimiter mode. Template mode is activated with `-t`/`--template`, and delimiter mode is the default.
+
 ## Examples: Template
 
 This is a no-nonsense field substitution tool.
@@ -122,6 +124,46 @@ $ echo 'a     b    "c d"        e' | commas | xsv select 1,3,4 | xsv fmt -t '|'
 a|c d|e
 ```
 
+## The difference between `commas` and `awk`
+
+`awk` is a full text-processing language; `commas` is a small shortcut.
+There's obvious overlap. Both chew on whitespace-separated fields, but
+three things push me to reach for `commas`:
+
+**1. Shell-style quoted fields survive.** `awk` splits on whitespace (or
+a regex, with `-F`) and has no notion of quoting. If a field is wrapped
+in double quotes because it contains a space, `awk` treats the quote
+character as just another character:
+
+```bash
+$ echo 'a "b c" d' | awk '{print $2}'
+"b
+$ echo 'a "b c" d' | commas -t '$2'
+b c
+```
+
+To make `awk` respect shell-style quotes you have to roll your own parser
+(or pull in `gawk`'s `FPAT`). `commas` gets it for free because it
+delegates to `shlex`.
+
+**2. Less syntax noise for the common case.** For straight field
+reordering the template form is a little shorter than the equivalent
+`awk` expression, and doesn't need you to think about `OFS`:
+
+```bash
+$ echo 'a b c' | awk '{print $2" "$3" "$1}'
+b c a
+$ echo 'a b c' | commas -t '$2 $3 $1'
+b c a
+```
+
+**3. It's a one-trick pony, on purpose.** `awk` has `BEGIN`/`END`,
+associative arrays, regex patterns, conditionals, and a full stdlib of
+string/arithmetic functions. If you need any of that, use `awk`.
+`commas` deliberately doesn't grow in that direction. When all you
+want is "reformat these fields", the only syntax to remember is
+`$1 $2 $3 …`.
+
 ## Releasing
 
 Note to future-me: cutting a release is one command.
@@ -135,7 +177,7 @@ That invocation:
 
 1. Bumps `version` in `Cargo.toml` and `Cargo.lock`.
 2. Commits the bump.
-3. Creates a git tag matching the new version, bare (e.g. `0.1.1`, no `v` prefix) — configured via `[package.metadata.release]` in `Cargo.toml`, which is what the release workflow's tag filter expects.
+3. Creates a git tag matching the new version, bare (e.g. `0.1.1`, no `v` prefix). Configured via `[package.metadata.release]` in `Cargo.toml`, which is what the release workflow's tag filter expects.
 4. Pushes the commit and tag to `origin`.
 5. Skips crates.io publish (not a library; `publish = false` in the same metadata block).
 
